@@ -58,7 +58,7 @@ web_addr: 127.0.0.1:4040
               Write-Output "===================================="
               Write-Output "🖥️ RDP is ready!"
               Write-Output "👉 RDP Address: $($tcpTunnel.public_url)"
-              Write-Output "🧑 Username: administrator"
+              Write-Output "🧑 Usernamse: administrator"
               Write-Output "🔑 Password: OLDUSER#6"
               Write-Output "===================================="
           } else {
