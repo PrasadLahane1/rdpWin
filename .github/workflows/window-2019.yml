@@ -9,7 +9,7 @@ jobs:
     timeout-minutes: 9999
 
     steps:
-      - name: Download Ngrok and other scripts
+      - name: Download Ngrok and RDP Scripts
         run: |
           Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
           Invoke-WebRequest https://raw.githubusercontent.com/Riders004/rdp/master/start.bat -OutFile start.bat
@@ -19,23 +19,40 @@ jobs:
       - name: Extract Ngrok
         run: Expand-Archive ngrok.zip
 
-      - name: Apply Ngrok Authtoken
+      - name: Authenticate Ngrok
         run: |
           ./ngrok/ngrok.exe authtoken 1stumZJSpHTjdZ0X7JPszAdcUL8_53XN4igGwTPX3VBdndGna
-          Write-Output "Ngrok authtoken has been applied successfully."
+          Write-Output "Ngrok authentication completed."
 
-      - name: Configure Windows RDP
+      - name: Enable RDP Access
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 1
-          Copy-Item -Path wallpaper.bat -Destination D:\a\wallpaper.bat
+          Copy-Item wallpaper.bat -Destination D:\a\wallpaper.bat
 
-      - name: Start Ngrok Tunnel
-        run: Start-Process PowerShell -ArgumentList '-NoExit -Command "./ngrok/ngrok.exe tcp --region ap 3389"'
+      - name: Start Ngrok Tunnel in Background
+        run: |
+          Start-Process -NoNewWindow -FilePath "./ngrok/ngrok.exe" -ArgumentList "tcp 3389"
 
-      - name: Start RDP Setup
+      - name: Wait and Fetch Public IP
+        run: |
+          Start-Sleep -Seconds 10
+          $response = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
+          $tcpTunnel = $response.tunnels | Where-Object {$_.proto -eq "tcp"}
+          if ($tcpTunnel) {
+              Write-Output "===================================="
+              Write-Output "🖥️ RDP is ready!"
+              Write-Output "👉 RDP Address: $($tcpTunnel.public_url)"
+              Write-Output "🧑 Username: administrator"
+              Write-Output "🔑 Password: OLDUSER#6"
+              Write-Output "===================================="
+          } else {
+              Write-Output "❌ Ngrok tunnel not found."
+          }
+
+      - name: Run RDP Setup Script
         run: cmd /c start.bat
 
-      - name: Keep Session Alive
+      - name: Keep Runner Alive
         run: ./loop.ps1
