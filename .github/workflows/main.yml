@@ -23,11 +23,9 @@ jobs:
         run: |
           ./ngrok/ngrok.exe authtoken 1stumZJSpHTjdZ0X7JPszAdcUL8_53XN4igGwTPX3VBdndGna
           New-Item -Path "$env:USERPROFILE\AppData\Local\ngrok" -ItemType Directory -Force
-          Set-Content -Path "$env:USERPROFILE\AppData\Local\ngrok\ngrok.yml" -Value @"
-web_addr: 127.0.0.1:4040
-"@
-
-      - name: Enable RDP
+          Set-Content -Path "$env:USERPROFILE\AppData\Local\ngrok\ngrok.yml" -Value @"web_addr: 127.0.0.1:4040"@
+          
+      - name : kund
         run: |
           Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0
           Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
