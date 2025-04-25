@@ -23,7 +23,9 @@ jobs:
         run: |
           ./ngrok/ngrok.exe authtoken 1stumZJSpHTjdZ0X7JPszAdcUL8_53XN4igGwTPX3VBdndGna
           New-Item -Path "$env:USERPROFILE\AppData\Local\ngrok" -ItemType Directory -Force
-          Set-Content -Path "$env:USERPROFILE\AppData\Local\ngrok\ngrok.yml" -Value "web_addr: 127.0.0.1:4040"
+          Set-Content -Path "$env:USERPROFILE\AppData\Local\ngrok\ngrok.yml" -Value @"
+web_addr: 127.0.0.1:4040
+"@
 
       - name: Enable RDP
         run: |
@@ -35,11 +37,23 @@ jobs:
         run: |
           Start-Process -NoNewWindow -FilePath "./ngrok/ngrok.exe" -ArgumentList "tcp 3389"
 
-      - name: Wait & Show RDP Address
+      - name: Wait for Ngrok Tunnel and Show RDP Address
         run: |
-          Start-Sleep -Seconds 10
-          $response = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels
-          $tcpTunnel = $response.tunnels | Where-Object { $_.proto -eq "tcp" }
+          $maxRetries = 15
+          $retry = 0
+          $tcpTunnel = $null
+
+          while ($retry -lt $maxRetries -and -not $tcpTunnel) {
+              Start-Sleep -Seconds 2
+              try {
+                  $response = Invoke-RestMethod -Uri http://127.0.0.1:4040/api/tunnels -ErrorAction Stop
+                  $tcpTunnel = $response.tunnels | Where-Object { $_.proto -eq "tcp" }
+              } catch {
+                  $tcpTunnel = $null
+              }
+              $retry++
+          }
+
           if ($tcpTunnel) {
               Write-Output "===================================="
               Write-Output "🖥️ RDP is ready!"
@@ -48,7 +62,8 @@ jobs:
               Write-Output "🔑 Password: OLDUSER#6"
               Write-Output "===================================="
           } else {
-              Write-Output "❌ Ngrok tunnel not found."
+              Write-Output "❌ Ngrok tunnel not found after waiting."
+              Exit 1
           }
 
       - name: Run RDP Script
